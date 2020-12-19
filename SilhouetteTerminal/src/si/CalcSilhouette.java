@@ -26,7 +26,7 @@ public class CalcSilhouette{
 	public static String CalcularSilhouette(File file) throws IOException {
 
 		String output = "";
-		String typeOfSilh = "0";
+		String typeOfSilh = "0"; //default 0 but it will be checked
 
 		ArrayList<Integer> qtdGrupos = new ArrayList<Integer>();
 
