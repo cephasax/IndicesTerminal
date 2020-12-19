@@ -5,6 +5,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 import weka.core.AttributeStats;
 import weka.core.Instance;
@@ -20,144 +24,166 @@ public class CalcSilhouette{
 	public static int indice; 
 	
 	public static String CalcularSilhouette(File file) throws IOException {
-	
-	StringBuilder sbIni = new StringBuilder();
-	StringBuilder sbFim = new StringBuilder();
-	
-	DecimalFormat df = new DecimalFormat();
-	df.setMinimumFractionDigits(4);
-	
-	FileInputStream inFile = new FileInputStream( file );
-	InputStreamReader in = new InputStreamReader( inFile );
-	Instances base = new Instances( in );
-	base.setClassIndex( base.numAttributes() - 1 );
-	
-	AttributeStats as = base.attributeStats(base.classIndex());
-	indice = base.numAttributes() - 1;
-	
-	qtd = new int [as.nominalCounts.length];
-    
-	for (int i = 0; i < as.nominalCounts.length; i++) {
-    	qtd[i]= new Integer(as.nominalCounts[i]);
-    }
-	
-    colunas = 2;
-    colunas += base.numClasses();
-    matDist = new double [base.numInstances()][colunas];
-    
-    for (int i=0; i < base.numInstances(); i++){
-    	for (int j=0; j < base.numInstances(); j++){
-    		
-    		if (i == j) continue;
-    		
-    		//agrupamentos com o atributo cluster com uma string iniciada por "cluster"
-    		if(base.instance(i).stringValue(indice).contains("cluster")) {
-	    		//cluster começando em 1
-	    		try{
-	        		if (base.get(i).stringValue(indice).equalsIgnoreCase(base.get(j).stringValue(indice))){
-	        			matDist[i][0] += 
-	        					Distancia (base.instance(i), base.instance(j)) / 
-	        			        (qtd[Integer.parseInt(base.get(i).stringValue(indice).substring(7)) -1 ] - 1); 
-	        		}
-	        		else {
-	        			matDist[i][Integer.parseInt(base.get(j).stringValue(indice).substring(7))] += 
-	        					Distancia (base.instance(i), base.instance(j)) /
-	        			        qtd[Integer.parseInt(base.get(j).stringValue(indice).substring(7)) -1 ];
-	        		}
-	    		}
-	    		//cluster começando em 0
-	    		catch (Exception e) {
-	  
-	        		if (base.get(i).stringValue(indice).equalsIgnoreCase(base.get(j).stringValue(indice))){
-	        			matDist[i][0] += 
-	    					Distancia (base.instance(i), base.instance(j)) / 
-	    			        (qtd[Integer.parseInt(base.get(i).stringValue(indice).substring(7))] - 1); 
-	        		}
-	        		else {
-	        			matDist[i][Integer.parseInt(base.get(j).stringValue(indice).substring(7))+1] += 
-	    					Distancia (base.instance(i), base.instance(j)) /
-	    			        qtd[Integer.parseInt(base.get(j).stringValue(indice).substring(7))];
-	        		}
-				}
-    		}
-    		
-    		//agrupamentos com o atributo cluster representado apenas pelo numero do cluster
-    		else {
-    			//cluster começando em 1
-    			try{
-	        		if (base.get(i).stringValue(indice).equalsIgnoreCase(base.get(j).stringValue(indice))){
-	        			matDist[i][0] += 
-	        					Distancia (base.instance(i), base.instance(j)) / 
-	        			        (qtd[Integer.parseInt(base.get(i).stringValue(indice)) -1 ] - 1); 
-	        		}
-	        		else {
-	        			matDist[i][Integer.parseInt(base.get(j).stringValue(indice))] += 
-	        					Distancia (base.instance(i), base.instance(j)) /
-	        			        qtd[Integer.parseInt(base.get(j).stringValue(indice)) -1 ];
-	        		}
-	    		}
-	    		//cluster começando em 0
-	    		catch (Exception e) {
-	  
-	        		if (base.get(i).stringValue(indice).equalsIgnoreCase(base.get(j).stringValue(indice))){
-	        			matDist[i][0] += 
-	    					Distancia (base.instance(i), base.instance(j)) / 
-	    			        (qtd[Integer.parseInt(base.get(i).stringValue(indice))] - 1); 
-	        		}
-	        		else {
-	        			matDist[i][Integer.parseInt(base.get(j).stringValue(indice))+1] += 
-	    					Distancia (base.instance(i), base.instance(j)) /
-	    			        qtd[Integer.parseInt(base.get(j).stringValue(indice))];
-	        		}
-				}
-    		}
-    		
-    	}
-    }
-    
-    for (int i=0; i < base.numInstances(); i++){
-    	double bi=0;
-    	bi = Calcula_bi(i);
-    	matDist[i][colunas-1] = ( bi - matDist[i][0]) / Math.max(matDist[i][0], bi);
-    }
-    
-    silhouette = new double [base.numClasses() + 1];
-    for (int i=0; i < base.numInstances(); i++){
-    	for (int j=1; j < colunas; j++){
-    		if (matDist[i][j] == 0) {
-    			silhouette[j-1] += matDist[i][colunas - 1]; 
-    		}
-    	}
-    }
-    
-    for (int i=0; i < base.numClasses(); i++){
-    	silhouette[i] = silhouette[i] / qtd[i]; 
-    	silhouette[base.numClasses()] += silhouette[i]; 
-    }
-    silhouette[base.numClasses()] =  silhouette[base.numClasses()] / base.numClasses();
-    
-    //System.out.println(file.getName());
-    //output += file.getName() + "\n";
-    
-    //Mudança para saída em linhas
-    sbIni.append(file.getName() + ";");
-    
-    for (int i=0; i < silhouette.length - 1; i++){
-    	//output +="Silhouette cluster" + (i) +  ": " + df.format(silhouette[i]) + "\n";
-    	
-    	//Mudança para saída em linhas
-    	sbFim.append(";" + df.format(silhouette[i]));
-    }
-    
-    //output += "File: " + fileAtual.getName() + " - Silhouette Geral: " + df.format(silhouette[base.numClasses()]) + "\n";
-    //output += "-----------------------------------------------------------------------------------" + "\n";
 
-    //Mudança para saída em linhas
-    sbIni.append(df.format(silhouette[base.numClasses()]));
-    sbIni.append(sbFim.toString());
-    
-	return sbIni.toString();
-}
+		String output = "";
+		String typeOfSilh = "0";
+
+		ArrayList<Integer> qtdGrupos = new ArrayList<Integer>();
+
+		DecimalFormat df = new DecimalFormat();
+		df.setMinimumFractionDigits(4);
+
+		FileInputStream inFile = new FileInputStream(file);
+		InputStreamReader in = new InputStreamReader(inFile);
+		Instances base = new Instances(in);
+		base.setClassIndex(base.numAttributes() - 1);
+
+		AttributeStats as = base.attributeStats(base.classIndex());
+		indice = base.numAttributes() - 1;
+
+		qtd = new int[as.nominalCounts.length];
+		for (int i = 0; i < as.nominalCounts.length; i++) {
+			qtd[i] = new Integer(as.nominalCounts[i]);
+
+			qtdGrupos.add(qtd[i]);
+		}
+
+		typeOfSilh = checkTypeOfSil(base);
+
+		colunas = 2;
+		colunas += base.numClasses();
+		matDist = new double[base.numInstances()][colunas];
+
+		// implementação com cluster começando em 1
+		if (typeOfSilh.equals("1")) {
+			for (int i = 0; i < base.numInstances(); i++) {
+				for (int j = 0; j < base.numInstances(); j++) {
+					if (i == j)
+						continue;
+					if (base.get(i).stringValue(indice).equalsIgnoreCase(base.get(j).stringValue(indice))) {
+						matDist[i][0] += Distancia(base.instance(i), base.instance(j))
+								/ (qtd[Integer.parseInt(base.get(i).stringValue(indice).substring(7)) - 1] - 1);
+					} else {
+						matDist[i][Integer.parseInt(base.get(j).stringValue(indice).substring(7))] += Distancia(
+								base.instance(i), base.instance(j))
+								/ qtd[Integer.parseInt(base.get(j).stringValue(indice).substring(7)) - 1];
+					}
+				}
+			}
+		}
+
+		// implementação nova com cluster começando em 0
+		else if (typeOfSilh.equals("0")) {
+			for (int i = 0; i < base.numInstances(); i++) {
+				for (int j = 0; j < base.numInstances(); j++) {
+
+					if (i == j)
+						continue;
+
+					if (base.get(i).stringValue(indice).equalsIgnoreCase(base.get(j).stringValue(indice))) {
+						matDist[i][0] += Distancia(base.instance(i), base.instance(j))
+								/ (qtd[Integer.parseInt(base.get(i).stringValue(indice).substring(7))] - 1);
+					} else {
+						matDist[i][Integer.parseInt(base.get(j).stringValue(indice).substring(7)) + 1] += Distancia(
+								base.instance(i), base.instance(j))
+								/ qtd[Integer.parseInt(base.get(j).stringValue(indice).substring(7))];
+					}
+				}
+			}
+		}
+
+		for (int i = 0; i < base.numInstances(); i++) {
+			double bi = 0;
+			bi = Calcula_bi(i);
+			// System.out.println("a(i): " + matDist[i][0]);
+			matDist[i][colunas - 1] = (bi - matDist[i][0]) / Math.max(matDist[i][0], bi);
+		}
+
+		silhouette = new double[base.numClasses() + 1];
+		for (int i = 0; i < base.numInstances(); i++) {
+			for (int j = 1; j < colunas; j++) {
+				if (matDist[i][j] == 0) {
+					silhouette[j - 1] += matDist[i][colunas - 1];
+				}
+			}
+		}
+
+		for (int i = 0; i < base.numClasses(); i++) {
+			silhouette[i] = silhouette[i] / qtd[i];
+			silhouette[base.numClasses()] += silhouette[i];
+		}
+		silhouette[base.numClasses()] = silhouette[base.numClasses()] / base.numClasses();
+
+		return buildOutputCsvMode(silhouette, typeOfSilh, df, file, base);
+	}
+	
+	private static String buildOutputCsvMode(double[] silhouette, String typeOfSilh, DecimalFormat df, File file, Instances base) {
+
+		StringBuilder sbIni = new StringBuilder();
+		StringBuilder sbFim = new StringBuilder();
+		
+		//Mudança para saída em linhas
+	    sbIni.append(file.getName() + ";");
+	    
+	    for (int i=0; i < silhouette.length - 1; i++){
+	    	//output +="Silhouette cluster" + (i) +  ": " + df.format(silhouette[i]) + "\n";
+	    	
+	    	//Mudança para saída em linhas
+	    	sbFim.append(";" + df.format(silhouette[i]));
+	    }
+	    
+	    //output += "File: " + fileAtual.getName() + " - Silhouette Geral: " + df.format(silhouette[base.numClasses()]) + "\n";
+	    //output += "-----------------------------------------------------------------------------------" + "\n";
+
+	    //Mudança para saída em linhas
+	    sbIni.append(df.format(silhouette[base.numClasses()]));
+	    sbIni.append(sbFim.toString());
+	    
+		return sbIni.toString();
+	}
+	
+	
+	
+	/**
+	 * saída anterior usada pelo prof JCX
+	 */
+	private static String buildOutputJcxMode(double[] silhouette, String typeOfSilh, DecimalFormat df, File file, Instances base) {
+		
+		String output = "";
+		
+		// escrevendo arquivo e tempo de processamento ...
+	    Date d = GregorianCalendar.getInstance().getTime();
+		SimpleDateFormat format = new SimpleDateFormat();
+		
+		System.out.println(file.getName() + " - " + format.format(d));
+	    output += file.getName() + "\n";
+	    for (int i=0; i < silhouette.length - 1; i++){
+	    	
+	    	if (typeOfSilh.equals("1")) {
+	    		// out put cluster 1
+	        	output +="Silhouette cluster" + (i+1) +  ": " + df.format(silhouette[i]) + "\n";
+	    	}
+	    	else {
+	    		// output cluster 0
+	        	output +="Silhouette cluster" + (i) +  ": " + df.format(silhouette[i]) + "\n";
+	    	}
+	    }
+	    output += "Silhouette Geral...: " + df.format(silhouette[base.numClasses()]) + "\n";
+	    output += "-----------------------------------------------------------------------------------" + "\n";
+	    return output;
+	}
+	
+	private static String checkTypeOfSil(Instances base) {
+		String ret = new String("1");
+	    
+	    for(int i = 0; i < base.attribute(indice).numValues();i++) {
+	    	if(base.attribute(indice).value(i).contains("ter0")) {
+	    		ret = "0";
+	    	}
+	    }
+	    
+	    return ret;
+	}
 
 	private static double Calcula_bi(int i) {
 		menor = new double[colunas - 3];
@@ -169,6 +195,7 @@ public class CalcSilhouette{
 			}
 		}
 		Bubblesort(menor); 
+		//System.out.println(menor[0]);
 		return menor[0];
 	}
 	
@@ -197,17 +224,23 @@ public class CalcSilhouette{
 				}
 				// atributo nao hieraquico
 				else {
-					//if (a.value( i ) == b.value( i )) 	diff += Math.pow(0,2);
-					//else 									diff += Math.pow(1,2);
-					diff += a.value( i ) == b.value( i ) ? 0 : 1;
+					if (a.value( i ) == b.value( i )){
+						diff += Math.pow(0,2);
+						//System.out.println(a.attribute(i).name() + " = " + diff);
+					}	
+					else {	
+						diff += Math.pow(1,2);
+						//System.out.println(a.attribute(i).name() + " # " + diff);
+					}	
 				}
 			}
 			else {
-				//diff += Math.pow( a.value( i ) - b.value( i ), 2 );
-				diff += Math.abs( a.value( i ) - b.value( i ) );
+				diff += Math.pow( a.value( i ) - b.value( i ), 2 );
+				//diff += Math.abs( a.value( i ) - b.value( i ) );
+				//System.out.println(a.attribute(i).name() + " # " + diff);
 			}
 		}
-		//diff = Math.sqrt(diff);
+		diff = Math.sqrt(diff);
 		return diff;
 	}
 	
@@ -251,5 +284,4 @@ public class CalcSilhouette{
 			}
 		}
 	}
-
 }
